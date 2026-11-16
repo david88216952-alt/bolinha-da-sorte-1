@@ -1,0 +1,112 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  fullName     String
+  cpf          String    @unique
+  phone        String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("USER") // USER or ADMIN
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  orders       Order[]
+  tickets      Ticket[]
+  winners      Winner[]
+}
+
+model Campaign {
+  id              String         @id @default(uuid())
+  title           String
+  subtitle        String?
+  description     String
+  prizeValue      Float          // In R$, used for sorting on Home (highest first)
+  ticketPrice     Float          // In R$, e.g. 0.06
+  totalTickets    Int            // Total quota count
+  promoPackages   String         // JSON String, e.g. [{"qty": 30, "price": 1.80}, ...]
+  promoBannerText String?        // e.g. "4x MAIS CHANCES! Reserve acima de 2000 números..."
+  drawDate        DateTime
+  status          String         @default("ACTIVE") // ACTIVE, COMPLETED
+  coverImageUrl   String
+  galleryImages   String         // JSON Array of strings (URLs)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  orders          Order[]
+  tickets         Ticket[]
+  winners         Winner[]
+  instantPrizes   InstantPrize[]
+}
+
+model Order {
+  id                String    @id @default(uuid())
+  userId            String
+  campaignId        String
+  quantity          Int
+  totalAmount       Float
+  paymentStatus     String    @default("PENDING") // PENDING, PAID, EXPIRED
+  pixQrCode         String
+  pixCopyPaste      String
+  pixKey            String?
+  externalPaymentId String
+  paidAt            DateTime?
+  expiresAt         DateTime
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign          Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tickets           Ticket[]
+}
+
+model Ticket {
+  id                 String    @id @default(uuid())
+  campaignId         String
+  orderId            String
+  userId             String
+  ticketNumber       String    // Formatted with leading zeros, e.g. "0030627"
+  isInstantPrize     Boolean   @default(false)
+  instantPrizeValue  Float?
+  createdAt          DateTime  @default(now())
+
+  campaign           Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, ticketNumber])
+  @@index([userId])
+}
+
+model InstantPrize {
+  id                 String    @id @default(uuid())
+  campaignId         String
+  ticketNumber       String
+  prizeValue         Float
+  isClaimed          Boolean   @default(false)
+  claimedByName      String?
+  claimedAt          DateTime?
+
+  campaign           Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, ticketNumber])
+}
+
+model Winner {
+  id                  String    @id @default(uuid())
+  campaignId          String
+  userId              String
+  winningTicketNumber String
+  winnerPhotoUrl      String?
+  awardedAt           DateTime  @default(now())
+
+  campaign            Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
