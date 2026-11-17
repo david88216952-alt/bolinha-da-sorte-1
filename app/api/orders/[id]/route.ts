@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getPixConfig } from "@/lib/settings";
 import { generatePixCopyPaste, generatePixData } from "@/lib/pix";
+import { checkGatewayPaymentStatus, processPaidOrder } from "@/lib/pix-gateway";
 
 export async function GET(
   request: Request,
@@ -10,7 +11,7 @@ export async function GET(
   try {
     const { id } = await props.params;
 
-    const order = await prisma.order.findUnique({
+    let order = await prisma.order.findUnique({
       where: { id },
       include: {
         campaign: {
@@ -49,8 +50,21 @@ export async function GET(
       );
     }
 
-    // Se o pedido ainda estiver PENDENTE, verificar se a chave ou link Pix recebedor mudou
+    // Se o pedido ainda estiver PENDENTE, verificar se o gateway já aprovou o pagamento
     if (order.paymentStatus === "PENDING") {
+      try {
+        if (order.externalPaymentId) {
+          const isApproved = await checkGatewayPaymentStatus(order.externalPaymentId);
+          if (isApproved) {
+            const paidResult = await processPaidOrder(order.id, order.externalPaymentId);
+            return NextResponse.json({ order: paidResult.order });
+          }
+        }
+      } catch (checkErr) {
+        console.error("Error verifying payment with gateway:", checkErr);
+      }
+
+      // Verificar se a chave ou link Pix recebedor mudou no admin
       try {
         const pixConfig = await getPixConfig();
         const freshCopyPaste = generatePixCopyPaste(

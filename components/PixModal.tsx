@@ -11,6 +11,7 @@ import {
   Loader2,
   Zap,
   Key,
+  Sparkles,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
@@ -62,7 +63,7 @@ export default function PixModal({
     setCopied(false);
     setCurrentPixCopyPaste(order.pixCopyPaste || "");
 
-    // Polling automático a cada 4 segundos: detecta confirmação de pagamento real via webhook
+    // Polling automático a cada 3 segundos: detecta confirmação de pagamento real via webhook
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${order.id}`);
@@ -81,7 +82,7 @@ export default function PixModal({
       } catch {
         // Silencioso em caso de oscilação momentânea de rede
       }
-    }, 4000);
+    }, 3000);
 
     // Calcular tempo restante com base no expiresAt
     if (order.expiresAt) {
@@ -204,6 +205,33 @@ export default function PixModal({
                   <span className="font-bold text-slate-900 dark:text-slate-100">{order.quantity} cotas</span>
                 </div>
               </div>
+
+              {/* Exibição Imediata dos Números Gerados */}
+              {((paidDetails?.tickets && paidDetails.tickets.length > 0) || (order.tickets && order.tickets.length > 0)) && (
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      Seus Bilhetes Homologados ({(paidDetails?.tickets || order.tickets).length}):
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                    {(paidDetails?.tickets || order.tickets).map((t: any) => (
+                      <span
+                        key={t.id || t.ticketNumber}
+                        className={`px-2.5 py-1 rounded-lg font-mono text-xs font-black border shadow-2xs ${
+                          t.isInstantPrize
+                            ? "bg-amber-400 text-neutral-950 border-amber-500 ring-2 ring-amber-400/50"
+                            : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        #{t.ticketNumber}
+                        {t.isInstantPrize && " 🏆"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="pt-2 flex flex-col gap-2">
                 <Link

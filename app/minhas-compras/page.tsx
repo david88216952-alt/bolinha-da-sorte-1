@@ -58,6 +58,32 @@ export default function MinhasComprasPage() {
     loadOrders();
   }, []);
 
+  // Polling automático a cada 3 segundos para pedidos pendentes
+  useEffect(() => {
+    const hasPending = orders.some((o) => o.paymentStatus === "PENDING");
+    if (!hasPending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        let url = "/api/orders";
+        if (searchQuery && searchQuery.trim()) {
+          url += `?query=${encodeURIComponent(searchQuery.trim())}`;
+        }
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.orders) {
+            setOrders(data.orders);
+          }
+        }
+      } catch (err) {
+        // Silencioso em caso de oscilação momentânea de rede
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [orders, searchQuery]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadOrders(searchQuery);

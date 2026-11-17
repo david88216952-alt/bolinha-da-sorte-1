@@ -66,6 +66,9 @@ export async function POST(request: Request) {
       },
     });
 
+    const requestUrl = new URL(request.url);
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+
     // Gerar Pix real (Mercado Pago, Asaas ou EMV Central Bank com chave do admin)
     const pixData = await createPixCharge({
       orderId: initialOrder.id,
@@ -75,6 +78,7 @@ export async function POST(request: Request) {
       buyerCpf: userDb?.cpf || (pixKey.includes("@") ? "" : pixKey),
       buyerPhone: userDb?.phone,
       description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
+      baseUrl,
     });
 
     const order = await prisma.order.update({
