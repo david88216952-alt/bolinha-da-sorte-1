@@ -110,3 +110,9 @@ model Winner {
   campaign            Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

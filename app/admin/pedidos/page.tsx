@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import DraggableTable from "@/components/DraggableTable";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 import {
   CreditCard,
   Search,
@@ -19,9 +20,17 @@ import {
   Sparkles,
   QrCode,
   Ticket,
+  Settings,
+  Key,
+  Link2,
+  Building,
+  MapPin,
+  ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 
 export default function AdminPedidosPage() {
+  const { confirm, alert } = useConfirm();
   const [orders, setOrders] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +43,17 @@ export default function AdminPedidosPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [loadingTickets, setLoadingTickets] = useState(false);
+
+  // Modal Configurações Pix
+  const [pixConfigModalOpen, setPixConfigModalOpen] = useState(false);
+  const [loadingPixConfig, setLoadingPixConfig] = useState(false);
+  const [savingPixConfig, setSavingPixConfig] = useState(false);
+  const [pixConfig, setPixConfig] = useState({
+    receiverType: "KEY" as "KEY" | "LINK",
+    receiverKey: "",
+    merchantName: "BOLINHA DA SORTE OFICIAL",
+    merchantCity: "SAO PAULO",
+  });
 
   // Ações de cópia e aprovação
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -61,6 +81,21 @@ export default function AdminPedidosPage() {
     }
   };
 
+  const loadPixConfig = async () => {
+    try {
+      setLoadingPixConfig(true);
+      const res = await fetch("/api/admin/settings");
+      const data = await res.json();
+      if (res.ok && data.config) {
+        setPixConfig(data.config);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPixConfig(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       loadOrders(statusFilter, searchTerm);
@@ -80,15 +115,73 @@ export default function AdminPedidosPage() {
       if (res.ok && data.order) {
         setSelectedOrderDetails(data.order);
       } else {
-        alert("Não foi possível carregar os bilhetes deste pedido.");
+        await alert({
+          title: "Atenção",
+          message: "Não foi possível carregar os bilhetes deste pedido.",
+          variant: "warning",
+        });
         setTicketModalOpen(false);
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao buscar bilhetes.");
+      await alert({
+        title: "Erro",
+        message: "Erro ao buscar bilhetes do pedido.",
+        variant: "danger",
+      });
       setTicketModalOpen(false);
     } finally {
       setLoadingTickets(false);
+    }
+  };
+
+  // Salvar Configurações Pix
+  const handleSavePixConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pixConfig.receiverKey.trim()) {
+      await alert({
+        title: "Atenção",
+        message: "Por favor, preencha a Chave Pix ou o Link de Pagamento recebedor.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    try {
+      setSavingPixConfig(true);
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pixConfig),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setPixConfig(data.config);
+        setPixConfigModalOpen(false);
+        await alert({
+          title: "Configurações Atualizadas!",
+          message:
+            "A conta Pix recebedora foi atualizada com sucesso!\n\nO QR Code e o Copia e Cola de todos os pedidos pendentes na tela dos clientes atualizarão automaticamente em tempo real.",
+          variant: "success",
+        });
+        loadOrders();
+      } else {
+        await alert({
+          title: "Erro ao Salvar",
+          message: data.error || "Não foi possível salvar as configurações.",
+          variant: "danger",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      await alert({
+        title: "Erro de Comunicação",
+        message: "Erro ao comunicar com o servidor.",
+        variant: "danger",
+      });
+    } finally {
+      setSavingPixConfig(false);
     }
   };
 
@@ -98,11 +191,15 @@ export default function AdminPedidosPage() {
       minimumFractionDigits: 2,
     });
 
-    if (
-      !confirm(
-        `Confirmar aprovação manual do pedido #${order.id.slice(0, 8)} de "${order.buyerName}" no valor de R$ ${formattedVal}?\n\nOs bilhetes serão gerados imediatamente.`
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Aprovação Manual de Pagamento",
+      message: `Confirmar aprovação manual do pedido #${order.id.slice(0, 8)} de "${order.buyerName}" no valor de R$ ${formattedVal}?\n\nOs bilhetes serão gerados imediatamente para o comprador.`,
+      confirmLabel: "Sim, Aprovar Pagamento",
+      cancelLabel: "Cancelar",
+      variant: "warning",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -144,9 +241,13 @@ export default function AdminPedidosPage() {
   };
 
   // Copiar Pix Copia e Cola
-  const handleCopyPix = (pixCode: string, id: string) => {
+  const handleCopyPix = async (pixCode: string, id: string) => {
     if (!pixCode) {
-      alert("Código Pix não disponível para este pedido.");
+      await alert({
+        title: "Atenção",
+        message: "Código Pix não disponível para este pedido.",
+        variant: "info",
+      });
       return;
     }
     navigator.clipboard.writeText(pixCode);
@@ -160,13 +261,25 @@ export default function AdminPedidosPage() {
         {/* Topo do Módulo */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Gestão de Pedidos e Pagamentos Pix
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Auditoria de transações financeiras, confirmação de recebimento e consulta de cotas
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              loadPixConfig();
+              setPixConfigModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-r from-emerald-600 to-[#10B981] hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-95 shrink-0"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Configurar Chave / Link Pix</span>
+          </button>
         </div>
 
         {/* Notificação Toast */}
@@ -602,6 +715,174 @@ export default function AdminPedidosPage() {
                   Fechar
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Configuração da Chave / Link Pix Recebedora */}
+        {pixConfigModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
+            <div className="bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Cabeçalho do Modal */}
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-[#10B981]">
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                      Conta Pix Recebedora
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Configure a chave ou link Pix para receber os pagamentos
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPixConfigModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Corpo com formulário */}
+              <form onSubmit={handleSavePixConfig} className="p-6 space-y-4 overflow-y-auto">
+                {loadingPixConfig ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#10B981]" />
+                    <span className="text-xs font-semibold">Carregando configurações...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Alerta explicativo */}
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-start gap-3">
+                      <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0 mt-0.5" />
+                      <div className="text-xs text-emerald-900 dark:text-emerald-300 leading-relaxed">
+                        <strong className="font-bold">Atualização Instantânea em Tempo Real:</strong> Quando você salvar uma nova chave ou link, o QR Code e o Copia e Cola dos clientes com tela de pagamento aberta serão atualizados automaticamente sem precisar recarregar.
+                      </div>
+                    </div>
+
+                    {/* Seleção de Tipo: Chave Pix vs Link de Pagamento */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        Tipo de Recebimento
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPixConfig((prev) => ({ ...prev, receiverType: "KEY" }))}
+                          className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            pixConfig.receiverType === "KEY"
+                              ? "bg-emerald-50 dark:bg-emerald-950/50 border-[#10B981] text-emerald-700 dark:text-emerald-400 shadow-2xs"
+                              : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                          }`}
+                        >
+                          <Key className="w-4 h-4" />
+                          <span>Chave Pix</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPixConfig((prev) => ({ ...prev, receiverType: "LINK" }))}
+                          className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            pixConfig.receiverType === "LINK"
+                              ? "bg-emerald-50 dark:bg-emerald-950/50 border-[#10B981] text-emerald-700 dark:text-emerald-400 shadow-2xs"
+                              : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                          }`}
+                        >
+                          <Link2 className="w-4 h-4" />
+                          <span>Link de Pagamento</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Input Chave ou Link */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        {pixConfig.receiverType === "KEY"
+                          ? "Chave Pix (E-mail, CPF/CNPJ, Telefone ou Aleatória)"
+                          : "URL / Link de Pagamento (https://...)"}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={pixConfig.receiverKey}
+                        onChange={(e) =>
+                          setPixConfig((prev) => ({ ...prev, receiverKey: e.target.value }))
+                        }
+                        placeholder={
+                          pixConfig.receiverType === "KEY"
+                            ? "Ex: pix@bolinhadasorte.com.br ou 11999998888"
+                            : "Ex: https://mpago.la/pos/..."
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#10B981]"
+                      />
+                    </div>
+
+                    {/* Nome do Beneficiário */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Nome do Titular / Beneficiário
+                      </label>
+                      <input
+                        type="text"
+                        value={pixConfig.merchantName}
+                        onChange={(e) =>
+                          setPixConfig((prev) => ({ ...prev, merchantName: e.target.value }))
+                        }
+                        placeholder="Ex: BOLINHA DA SORTE OFICIAL"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#10B981]"
+                      />
+                    </div>
+
+                    {/* Cidade do Beneficiário */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Cidade do Beneficiário
+                      </label>
+                      <input
+                        type="text"
+                        value={pixConfig.merchantCity}
+                        onChange={(e) =>
+                          setPixConfig((prev) => ({ ...prev, merchantCity: e.target.value }))
+                        }
+                        placeholder="Ex: SAO PAULO"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#10B981]"
+                      />
+                    </div>
+
+                    {/* Botões de Ação */}
+                    <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setPixConfigModalOpen(false)}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingPixConfig}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-emerald-600 to-[#10B981] hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {savingPixConfig ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Salvando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Salvar Configurações Pix</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </form>
             </div>
           </div>
         )}

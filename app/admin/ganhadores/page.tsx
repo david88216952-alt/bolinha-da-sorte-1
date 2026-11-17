@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import DraggableTable from "@/components/DraggableTable";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 import {
   Trophy,
   UploadCloud,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function AdminGanhadoresPage() {
+  const { confirm, alert } = useConfirm();
   const [winners, setWinners] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,15 +179,39 @@ export default function AdminGanhadoresPage() {
   };
 
   const handleDeleteWinner = async (id: string) => {
-    if (!confirm("Deseja realmente remover este registro de ganhador?")) return;
+    const confirmed = await confirm({
+      title: "Remover Ganhador",
+      message: "Deseja realmente remover este registro de ganhador oficial?",
+      confirmLabel: "Sim, Remover Ganhador",
+      cancelLabel: "Cancelar",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/winners?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         loadData();
+        await alert({
+          title: "Registro Removido",
+          message: "O registro de ganhador foi removido com sucesso.",
+          variant: "success",
+        });
+      } else {
+        await alert({
+          title: "Erro ao Remover",
+          message: "Não foi possível remover o registro de ganhador.",
+          variant: "danger",
+        });
       }
     } catch (err) {
       console.error(err);
+      await alert({
+        title: "Erro de Comunicação",
+        message: "Erro ao comunicar com o servidor.",
+        variant: "danger",
+      });
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 import {
   Plus,
   UploadCloud,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function AdminCampanhasPage() {
+  const { confirm, alert } = useConfirm();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
@@ -187,11 +189,23 @@ export default function AdminCampanhasPage() {
   // Encerrar Campanha
   const handleCloseCampaign = async (camp: any) => {
     if (camp.status === "COMPLETED") {
-      alert("Esta campanha já está concluída.");
+      await alert({
+        title: "Campanha Concluída",
+        message: "Esta campanha já está concluída.",
+        variant: "info",
+      });
       return;
     }
 
-    if (!confirm(`Deseja realmente encerrar a campanha "${camp.title}"?`)) {
+    const confirmed = await confirm({
+      title: "Encerrar Campanha",
+      message: `Deseja realmente encerrar a campanha "${camp.title}"?\n\nNovas compras de cotas não serão mais permitidas.`,
+      confirmLabel: "Sim, Encerrar Campanha",
+      cancelLabel: "Cancelar",
+      variant: "warning",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -207,22 +221,39 @@ export default function AdminCampanhasPage() {
 
       if (res.ok) {
         loadCampaigns();
+        await alert({
+          title: "Campanha Encerrada",
+          message: `A campanha "${camp.title}" foi encerrada com sucesso.`,
+          variant: "success",
+        });
       } else {
-        alert("Erro ao encerrar campanha.");
+        await alert({
+          title: "Erro ao Encerrar",
+          message: "Não foi possível encerrar a campanha.",
+          variant: "danger",
+        });
       }
     } catch (err) {
       console.error(err);
-      alert("Erro de comunicação ao encerrar campanha.");
+      await alert({
+        title: "Erro de Comunicação",
+        message: "Erro de comunicação ao encerrar campanha.",
+        variant: "danger",
+      });
     }
   };
 
   // Excluir Campanha com Confirmação e Cascata
   const handleDeleteCampaign = async (camp: any) => {
-    if (
-      !confirm(
-        `Tem certeza que deseja excluir permanentemente a campanha "${camp.title}"?\n\nEsta ação apagará todos os dados vinculados a ela (pedidos, bilhetes e ganhadores). Ideal para limpar rifas de teste.`
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Excluir Campanha Permanentemente",
+      message: `Tem certeza que deseja excluir permanentemente a campanha "${camp.title}"?\n\nEsta ação apagará todos os dados vinculados a ela (pedidos, bilhetes e ganhadores). Ideal para limpar rifas de teste.`,
+      confirmLabel: "Sim, Excluir Campanha",
+      cancelLabel: "Voltar",
+      variant: "danger",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -233,13 +264,26 @@ export default function AdminCampanhasPage() {
 
       if (res.ok) {
         loadCampaigns();
+        await alert({
+          title: "Campanha Excluída",
+          message: `A campanha "${camp.title}" foi excluída com sucesso.`,
+          variant: "success",
+        });
       } else {
         const data = await res.json();
-        alert(data.error || "Erro ao excluir campanha.");
+        await alert({
+          title: "Erro ao Excluir",
+          message: data.error || "Erro ao excluir campanha.",
+          variant: "danger",
+        });
       }
     } catch (err) {
       console.error(err);
-      alert("Erro de comunicação ao excluir campanha.");
+      await alert({
+        title: "Erro de Comunicação",
+        message: "Erro de comunicação ao excluir campanha.",
+        variant: "danger",
+      });
     }
   };
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 import DraggableTable from "@/components/DraggableTable";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 import {
   DollarSign,
   Ticket,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
+  const { confirm, alert } = useConfirm();
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<"7days" | "30days">("7days");
@@ -74,12 +76,20 @@ export default function AdminDashboardPage() {
       if (res.ok && data.order) {
         setSelectedOrderDetails(data.order);
       } else {
-        alert("Não foi possível carregar os bilhetes deste pedido.");
+        await alert({
+          title: "Atenção",
+          message: "Não foi possível carregar os bilhetes deste pedido.",
+          variant: "warning",
+        });
         setTicketModalOpen(false);
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao buscar bilhetes do pedido.");
+      await alert({
+        title: "Erro de Comunicação",
+        message: "Erro ao buscar bilhetes do pedido. Tente novamente.",
+        variant: "danger",
+      });
       setTicketModalOpen(false);
     } finally {
       setLoadingTickets(false);
@@ -95,11 +105,14 @@ export default function AdminDashboardPage() {
     const formattedVal = Number(totalAmount).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
     });
-    if (
-      !confirm(
-        `Deseja realmente aprovar manualmente o pedido de "${buyerName}" no valor de R$ ${formattedVal}?\n\nOs bilhetes serão gerados e vinculados imediatamente ao comprador.`
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Aprovação Manual de Pagamento",
+      message: `Deseja realmente aprovar manualmente o pedido de "${buyerName}" no valor de R$ ${formattedVal}?\n\nOs bilhetes serão gerados e vinculados imediatamente ao comprador.`,
+      confirmLabel: "Sim, Aprovar Pagamento",
+      cancelLabel: "Cancelar",
+      variant: "warning",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -371,8 +384,8 @@ export default function AdminDashboardPage() {
         <section className="bg-white dark:bg-[#111827] p-6 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Evolução de Vendas</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Evolução de Vendas</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 {selectedCampaignId !== "all"
                   ? "Entradas registradas para a campanha selecionada"
                   : "Entradas consolidadas de todas as campanhas ativas"}
@@ -386,8 +399,8 @@ export default function AdminDashboardPage() {
                 onClick={() => setChartPeriod("7days")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   chartPeriod === "7days"
-                    ? "bg-white text-[#10B981] shadow-2xs font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-slate-700 text-[#10B981] shadow-2xs font-extrabold"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 7 dias
@@ -397,8 +410,8 @@ export default function AdminDashboardPage() {
                 onClick={() => setChartPeriod("30days")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   chartPeriod === "30days"
-                    ? "bg-white text-[#10B981] shadow-2xs font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-slate-700 text-[#10B981] shadow-2xs font-extrabold"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 30 dias
@@ -407,32 +420,130 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Gráfico de Barras Responsivo */}
-          <div className="w-full h-[280px] flex items-end justify-between gap-2 sm:gap-4 pt-6 pb-2">
+          <div className="w-full h-[280px] flex items-end justify-between gap-1 sm:gap-2 pt-8 pb-2 relative select-none">
             {chartData.length === 0 ? (
-              <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+              <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 dark:text-slate-500">
                 Nenhum dado de vendas no período
               </div>
             ) : (
               chartData.map((d: any, idx: number) => {
+                const is30Days = chartPeriod === "30days";
                 const heightPercent =
-                  maxVal > 0 ? Math.max(8, Math.round((d.revenue / maxVal) * 100)) : 8;
+                  d.revenue > 0 && maxVal > 0
+                    ? Math.max(10, Math.min(100, Math.round((d.revenue / maxVal) * 100)))
+                    : 4;
+
+                const shouldShowDate = is30Days
+                  ? idx === 0 ||
+                    idx === Math.floor(chartData.length * 0.25) ||
+                    idx === Math.floor(chartData.length * 0.5) ||
+                    idx === Math.floor(chartData.length * 0.75) ||
+                    idx === chartData.length - 1
+                  : true;
+
                 return (
                   <div
                     key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end group"
+                    className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative cursor-pointer"
                   >
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 group-hover:text-[#10B981] transition-colors truncate">
-                      R$ {d.revenue}
-                    </span>
-                    <div className="w-full max-w-[48px] bg-slate-100 rounded-t-xl overflow-hidden h-full flex items-end">
+                    {/* Tooltip Interativo Flutuante */}
+                    <div
+                      className={`absolute bottom-[calc(100%+10px)] z-30 hidden group-hover:flex flex-col gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white text-xs shadow-2xl border border-slate-700/60 pointer-events-none whitespace-nowrap transition-all duration-150 ${
+                        idx < 3
+                          ? "left-0"
+                          : idx > chartData.length - 4
+                          ? "right-0"
+                          : "left-1/2 -translate-x-1/2"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold text-slate-200 border-b border-slate-700/60 pb-1 text-[11px]">
+                        <Clock className="w-3 h-3 text-[#10B981]" />
+                        <span>
+                          {d.date} ({d.dayName})
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 text-[11px]">
+                        <span className="text-slate-400">Arrecadação:</span>
+                        <span className="font-extrabold text-[#10B981]">
+                          R${" "}
+                          {Number(d.revenue || 0).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 text-[11px]">
+                        <span className="text-slate-400">Cotas vendidas:</span>
+                        <span className="font-bold text-slate-200">
+                          {Number(d.tickets || 0).toLocaleString("pt-BR")} cotas
+                        </span>
+                      </div>
+                      {/* Setinha apontando para a barra */}
                       <div
-                        className="w-full bg-[#10B981] hover:bg-[#0EA271] rounded-t-xl transition-all duration-300 shadow-2xs"
+                        className={`absolute top-full -mt-1 w-2 h-2 rotate-45 bg-slate-900 dark:bg-slate-950 border-r border-b border-slate-700/60 ${
+                          idx < 3
+                            ? "left-3"
+                            : idx > chartData.length - 4
+                            ? "right-3"
+                            : "left-1/2 -translate-x-1/2"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Valor acima da barra (oculta 'R$ 0' e valores vazios) */}
+                    {d.revenue > 0 ? (
+                      <span
+                        className={`text-[9px] sm:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-500 transition-colors truncate ${
+                          is30Days ? "hidden md:block text-[8px]" : ""
+                        }`}
+                      >
+                        R${" "}
+                        {d.revenue >= 1000
+                          ? `${(d.revenue / 1000).toFixed(1)}k`
+                          : Number(d.revenue).toLocaleString("pt-BR")}
+                      </span>
+                    ) : (
+                      <span className="h-3 sm:h-4" />
+                    )}
+
+                    {/* Barra */}
+                    <div
+                      className={`w-full ${
+                        is30Days
+                          ? "max-w-[14px] sm:max-w-[20px]"
+                          : "max-w-[42px] sm:max-w-[54px]"
+                      } bg-slate-100 dark:bg-slate-800/80 rounded-t-xl overflow-hidden h-full flex items-end`}
+                    >
+                      <div
+                        className={`w-full rounded-t-xl transition-all duration-300 ${
+                          d.revenue > 0
+                            ? "bg-linear-to-t from-emerald-600 to-[#10B981] group-hover:from-emerald-500 group-hover:to-emerald-400 shadow-md shadow-emerald-500/20"
+                            : "bg-slate-200/70 dark:bg-slate-700/50 group-hover:bg-slate-300 dark:group-hover:bg-slate-600"
+                        }`}
                         style={{ height: `${heightPercent}%` }}
                       ></div>
                     </div>
-                    <span className="text-[10px] sm:text-xs text-slate-600 font-medium truncate">
-                      {d.dayName}
-                    </span>
+
+                    {/* Eixo X com datas reais DD/MM espaçadas */}
+                    <div className="h-5 flex items-center justify-center">
+                      {is30Days ? (
+                        shouldShowDate ? (
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">
+                            {d.date}
+                          </span>
+                        ) : (
+                          <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
+                        )
+                      ) : (
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 font-semibold truncate">
+                            {d.dayName}
+                          </span>
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                            {d.date}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })

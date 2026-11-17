@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { generatePixData } from "@/lib/pix";
+import { getPixConfig } from "@/lib/settings";
 
 export async function POST(request: Request) {
   try {
@@ -60,8 +61,17 @@ export async function POST(request: Request) {
       },
     });
 
+    // Carregar configuração da chave Pix recebedora do sistema
+    const pixConfig = await getPixConfig();
+
     // Gerar Pix real QR code base64 e copia e cola com o ID do pedido
-    const pixData = await generatePixData(totalAmount, initialOrder.id);
+    const pixData = await generatePixData(
+      totalAmount,
+      initialOrder.id,
+      pixConfig.receiverKey,
+      pixConfig.merchantName,
+      pixConfig.merchantCity
+    );
 
     const order = await prisma.order.update({
       where: { id: initialOrder.id },

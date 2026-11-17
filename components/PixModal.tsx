@@ -24,6 +24,8 @@ export default function PixModal({
   const [isPaid, setIsPaid] = useState(false);
   const [paidDetails, setPaidDetails] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutos em segundos
+  const [currentPixQrCode, setCurrentPixQrCode] = useState(order?.pixQrCode || "");
+  const [currentPixCopyPaste, setCurrentPixCopyPaste] = useState(order?.pixCopyPaste || "");
 
   useEffect(() => {
     if (!isOpen || !order) return;
@@ -31,6 +33,33 @@ export default function PixModal({
     // Reset states
     setIsPaid(order.paymentStatus === "PAID");
     setCopied(false);
+    setCurrentPixQrCode(order.pixQrCode || "");
+    setCurrentPixCopyPaste(order.pixCopyPaste || "");
+
+    // Polling dinâmico a cada 3.5 segundos: atualiza QR Code / Copia e Cola caso o admin mude a chave
+    // e detecta automaticamente confirmação de pagamento
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/${order.id}`);
+        const data = await res.json();
+        if (res.ok && data.order) {
+          if (data.order.pixQrCode && data.order.pixQrCode !== currentPixQrCode) {
+            setCurrentPixQrCode(data.order.pixQrCode);
+          }
+          if (data.order.pixCopyPaste && data.order.pixCopyPaste !== currentPixCopyPaste) {
+            setCurrentPixCopyPaste(data.order.pixCopyPaste);
+          }
+          if (data.order.paymentStatus === "PAID") {
+            setIsPaid(true);
+            setPaidDetails(data.order);
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            if (onPaymentConfirmed) onPaymentConfirmed();
+          }
+        }
+      } catch (err) {
+        // Silencioso em caso de oscilação de rede
+      }
+    }, 3500);
 
     // Calcular tempo restante com base no expiresAt
     if (order.expiresAt) {
@@ -54,7 +83,10 @@ export default function PixModal({
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearInterval(pollInterval);
+    };
   }, [isOpen, order]);
 
   if (!isOpen || !order) return null;
@@ -64,8 +96,9 @@ export default function PixModal({
   const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
   const handleCopy = () => {
-    if (!order.pixCopyPaste) return;
-    navigator.clipboard.writeText(order.pixCopyPaste);
+    const textToCopy = currentPixCopyPaste || order.pixCopyPaste;
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
   };
@@ -247,10 +280,10 @@ export default function PixModal({
 
               {/* QR Code Container */}
               <div className="flex flex-col items-center justify-center p-4 bg-neutral-50 border border-neutral-200 rounded-2xl">
-                {order.pixQrCode ? (
+                {(currentPixQrCode || order.pixQrCode) ? (
                   <div className="bg-white p-3 rounded-xl shadow-md border border-neutral-100">
                     <img
-                      src={order.pixQrCode}
+                      src={currentPixQrCode || order.pixQrCode}
                       alt="Pix QR Code"
                       className="w-52 h-52 object-contain"
                     />
@@ -274,7 +307,7 @@ export default function PixModal({
                   <input
                     type="text"
                     readOnly
-                    value={order.pixCopyPaste || ""}
+                    value={currentPixCopyPaste || order.pixCopyPaste || ""}
                     className="flex-1 px-3 py-2.5 bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-700 truncate select-all focus:outline-none"
                   />
                   <button

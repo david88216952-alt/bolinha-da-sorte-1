@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ShieldCheck, Lock, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 import AdminAccessDenied from "@/components/AdminAccessDenied";
 import ThemeToggle from "@/components/ThemeToggle";
+import Logo from "@/components/Logo";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -98,17 +99,11 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="w-full max-w-md bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-        {/* Logo BS Oficial e Selo de Acesso Restrito */}
+        {/* Logo BS Oficial de Alta Resolução e Selo de Acesso Restrito */}
         <div className="text-center space-y-3">
-          <Link href="/" className="inline-block transition-transform hover:scale-105">
-            <div className="bg-black/80 dark:bg-black/60 p-2.5 rounded-2xl inline-block shadow-md border border-slate-800">
-              <img
-                src="/images/logo-bs.png"
-                alt="Bolinha da Sorte"
-                className="h-10 w-auto object-contain"
-              />
-            </div>
-          </Link>
+          <div className="inline-block transition-transform hover:scale-105">
+            <Logo href="/" size="lg" variant="pill" />
+          </div>
 
           <div className="pt-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-black uppercase tracking-wider">

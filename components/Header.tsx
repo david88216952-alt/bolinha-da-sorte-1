@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AuthModal from "./AuthModal";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "./Logo";
 
 interface UserProfile {
   id: string;
@@ -64,16 +65,10 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#000000] border-b border-neutral-900 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#000000] border-b border-slate-200 dark:border-neutral-900 shadow-xs dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
           {/* 1. Logo Oficial Bolinha da Sorte (BS) */}
-          <Link href="/" className="flex items-center gap-2 group-hover:scale-105 transition-transform duration-200 shrink-0">
-            <img
-              src="/images/logo-bs.png"
-              alt="Bolinha da Sorte"
-              className="h-8 sm:h-9 md:h-10 w-auto object-contain"
-            />
-          </Link>
+          <Logo href="/" size="md" variant="auto" />
 
           {/* 2. Todos os Itens Visíveis Diretamente na Barra Superior (Sem Menu Hambúrguer) */}
           <nav className="flex items-center gap-2 sm:gap-3 md:gap-5 lg:gap-7 overflow-x-auto no-scrollbar py-2">
@@ -88,12 +83,12 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-xs sm:text-sm font-semibold transition-colors shrink-0 px-2 py-1 rounded-lg ${
+                  className={`text-xs sm:text-sm font-semibold transition-colors shrink-0 px-2.5 py-1.5 rounded-lg ${
                     active
-                      ? "text-[#4ADE80] font-bold bg-neutral-900/60"
+                      ? "text-[#10B981] font-bold bg-emerald-50 dark:bg-neutral-900/60"
                       : isAdmin
-                      ? "text-[#FACC15] hover:text-amber-300 font-bold hover:bg-neutral-900/40"
-                      : "text-neutral-300 hover:text-white hover:bg-neutral-900/40"
+                      ? "text-amber-600 dark:text-[#FACC15] hover:text-amber-700 dark:hover:text-amber-300 font-bold hover:bg-amber-50 dark:hover:bg-neutral-900/40"
+                      : "text-slate-600 dark:text-neutral-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-900/40"
                   }`}
                 >
                   {link.label}
@@ -111,13 +106,13 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl hover:bg-neutral-800 transition-all cursor-pointer"
+                  className="flex items-center gap-2 bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-slate-900 dark:text-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-neutral-800 transition-all cursor-pointer"
                 >
                   <div
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm border ${
                       user.role === "ADMIN"
-                        ? "bg-[#0E7A3E]/30 text-[#FACC15] border-[#0E7A3E]/60 shadow-inner"
-                        : "bg-emerald-600/20 text-emerald-400 border-emerald-500/30"
+                        ? "bg-[#0E7A3E]/30 text-amber-600 dark:text-[#FACC15] border-[#0E7A3E]/60 shadow-inner"
+                        : "bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                     }`}
                   >
                     {user.fullName.substring(0, 2).toUpperCase()}
@@ -128,7 +123,9 @@ export default function Header() {
                     </span>
                     <span
                       className={`text-[9px] font-black uppercase tracking-wider ${
-                        user.role === "ADMIN" ? "text-[#FACC15]" : "text-emerald-400"
+                        user.role === "ADMIN"
+                          ? "text-amber-600 dark:text-[#FACC15]"
+                          : "text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
                       {user.role === "ADMIN" ? "ADMIN" : "COMPRADOR"}
@@ -138,12 +135,12 @@ export default function Header() {
 
                 {/* Dropdown Menu */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl p-2 z-50">
-                    <div className="px-3 py-2 border-b border-neutral-800">
-                      <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-                      <p className="text-[11px] text-neutral-400 truncate">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-2xl p-2 z-50 text-slate-900 dark:text-white">
+                    <div className="px-3 py-2 border-b border-slate-100 dark:border-neutral-800">
+                      <p className="text-xs font-bold truncate">{user.fullName}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{user.email}</p>
                       {user.role === "ADMIN" && (
-                        <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider text-[#FACC15] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+                        <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider text-amber-600 dark:text-[#FACC15] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
                           Administrador Master
                         </span>
                       )}
@@ -153,7 +150,7 @@ export default function Header() {
                       <Link
                         href="/admin/dashboard"
                         onClick={() => setUserMenuOpen(false)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#10B981] hover:bg-neutral-900 rounded-lg transition-colors mt-1"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#10B981] hover:bg-slate-100 dark:hover:bg-neutral-900 rounded-lg transition-colors mt-1"
                       >
                         <ShieldCheck className="w-4 h-4 text-[#10B981]" />
                         <span>Ir para Centro de Comando</span>
@@ -163,15 +160,15 @@ export default function Header() {
                     <Link
                       href="/minhas-compras"
                       onClick={() => setUserMenuOpen(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors mt-1"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800 rounded-lg transition-colors mt-1"
                     >
-                      <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                      <ShoppingBag className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                       <span>Minhas Compras</span>
                     </Link>
 
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-950/30 rounded-lg transition-colors mt-1 cursor-pointer"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors mt-1 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Sair da Conta</span>

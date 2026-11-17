@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ClientLayoutShell from "@/components/ClientLayoutShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ConfirmDialogProvider } from "@/components/ConfirmDialogProvider";
 
 export const metadata: Metadata = {
   title: "Bolinha da Sorte — Plataforma Oficial de Rifas e Sorteios",
@@ -37,7 +38,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#F2F4F7] dark:bg-[#090D16] text-[#191C1E] dark:text-slate-100 transition-colors duration-200">
         <ThemeProvider>
-          <ClientLayoutShell>{children}</ClientLayoutShell>
+          <ConfirmDialogProvider>
+            <ClientLayoutShell>{children}</ClientLayoutShell>
+          </ConfirmDialogProvider>
         </ThemeProvider>
       </body>
     </html>

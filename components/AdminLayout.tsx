@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import AdminAccessDenied from "./AdminAccessDenied";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "./Logo";
 
 interface AdminUser {
   id: string;
@@ -242,13 +243,7 @@ export default function AdminLayout({
               className="flex items-center gap-2.5 group flex-1 min-w-0"
               onClick={() => setMobileSidebarOpen(false)}
             >
-              <div className="h-9 w-auto bg-black/5 dark:bg-black/40 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center shrink-0">
-                <img
-                  src="/images/logo-bs.png"
-                  alt="Bolinha da Sorte"
-                  className="h-6 w-auto object-contain"
-                />
-              </div>
+              <Logo size="sm" showText={false} variant="pill" className="p-1 shrink-0" />
               <div className="min-w-0">
                 <span className="text-slate-900 dark:text-white font-extrabold text-xs tracking-tight block truncate">
                   CENTRO DE COMANDO
