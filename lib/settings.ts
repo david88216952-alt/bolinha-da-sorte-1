@@ -9,7 +9,7 @@ export interface PixConfig {
 
 export const DEFAULT_PIX_CONFIG: PixConfig = {
   receiverType: "KEY",
-  receiverKey: "pagamentos@bolinhadasorte.com.br",
+  receiverKey: "+5575991638134",
   merchantName: "BOLINHA DA SORTE OFICIAL",
   merchantCity: "SAO PAULO",
 };

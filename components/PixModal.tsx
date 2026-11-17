@@ -29,6 +29,7 @@ export default function PixModal({
   onPaymentConfirmed,
 }: PixModalProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paidDetails, setPaidDetails] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutos em segundos
@@ -241,12 +242,54 @@ export default function PixModal({
                 </p>
               </div>
 
+              {/* Cartão de Identificação da Chave Pix Recebedora Oficial */}
+              <div className="p-3.5 sm:p-4 bg-slate-900 dark:bg-black border border-slate-800 rounded-2xl flex items-center justify-between text-xs shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-[#10B981] flex items-center justify-center font-bold shrink-0">
+                    <Key className="w-4 h-4 text-[#10B981]" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Chave Pix Recebedora Oficial
+                    </span>
+                    <span className="font-mono font-black text-white text-sm sm:text-base tracking-wide block">
+                      75991638134
+                    </span>
+                    <span className="text-[10px] text-emerald-400 block font-medium">
+                      Beneficiário: BOLINHA DA SORTE OFICIAL
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText("75991638134");
+                    setCopiedKey(true);
+                    setTimeout(() => setCopiedKey(false), 2500);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-slate-700 active:scale-95"
+                  title="Copiar Chave Telefone"
+                >
+                  {copiedKey ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                      <span className="text-[#10B981]">Copiada!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copiar Chave</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Chave Pix para Recebimento de Prêmios (se informada) */}
               {order.pixKey && (
                 <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs">
                   <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span>Chave Pix p/ prêmios:</span>
+                    <span>Sua Chave Pix para premiações:</span>
                   </span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 truncate max-w-[170px] sm:max-w-none">
                     {order.pixKey}
@@ -254,20 +297,20 @@ export default function PixModal({
                 </div>
               )}
 
-              {/* Área Direta de Pagamento: Código Pix Copia e Cola */}
+              {/* Área Direta de Pagamento: Código Pix Copia e Cola Oficial */}
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Código Pix Copia e Cola Oficial
+                    Código Pix Copia e Cola Oficial (BR Code EMV)
                   </label>
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-[#10B981] flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> Gateway Ativo
+                    <Zap className="w-3 h-3" /> Padrão Banco Central
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-100 dark:bg-slate-900/90 border-2 border-slate-300 dark:border-slate-700 rounded-2xl">
+                <div className="p-3.5 bg-slate-100 dark:bg-slate-900/90 border-2 border-slate-300 dark:border-slate-700 rounded-2xl shadow-inner">
                   <p className="font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all leading-relaxed max-h-24 overflow-y-auto">
-                    {copyPasteString || "Gerando código Pix..."}
+                    {copyPasteString || "Gerando código Pix oficial..."}
                   </p>
                 </div>
 
@@ -298,8 +341,8 @@ export default function PixModal({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
                   <p className="font-bold text-slate-800 dark:text-slate-200">Como pagar:</p>
                   <p>1. Clique no botão verde <strong>Copiar Código Pix</strong> acima.</p>
-                  <p>2. Abra o app do seu banco e acesse a opção <strong>Pix &gt; Copia e Cola</strong>.</p>
-                  <p>3. Cole o código e confirme a transferência.</p>
+                  <p>2. Abra o app do seu banco e acesse a opção <strong>Pix &gt; Pix Copia e Cola</strong>.</p>
+                  <p>3. Cole o código gerado com o valor exato de <strong>R$ {Number(order.totalAmount).toFixed(2).replace(".", ",")}</strong> e confirme o pagamento.</p>
                 </div>
               </div>
 

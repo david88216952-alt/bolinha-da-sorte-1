@@ -43,7 +43,17 @@ export function generatePixCopyPaste(
     return target;
   }
 
-  const pixKey = target || "pagamentos@bolinhadasorte.com.br";
+  // Chave oficial padrão do Bolinha da Sorte
+  let pixKey = target || "+5575991638134";
+  const digitsOnly = pixKey.replace(/\D/g, "");
+
+  // Formatar chave de telefone no padrão internacional exigido pelo Banco Central (+55...)
+  if ((digitsOnly.length === 11 || digitsOnly.length === 10) && !pixKey.includes("@")) {
+    pixKey = `+55${digitsOnly}`;
+  } else if (digitsOnly.length === 13 && digitsOnly.startsWith("55") && !pixKey.startsWith("+")) {
+    pixKey = `+${digitsOnly}`;
+  }
+
   const formattedAmount = amount.toFixed(2);
   const cleanTxId = (txId.replace(/[^a-zA-Z0-9]/g, "") || "PIX").substring(0, 25);
   const cleanName = (merchantName || "BOLINHA DA SORTE").trim().substring(0, 25).toUpperCase();
