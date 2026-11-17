@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { generatePixData } from "@/lib/pix";
-import { getPixConfig } from "@/lib/settings";
+import { createPixCharge } from "@/lib/pix-gateway";
 
 export async function POST(request: Request) {
   try {
@@ -45,6 +44,12 @@ export async function POST(request: Request) {
 
     const totalAmount = parseFloat((parsedQty * campaign.ticketPrice).toFixed(2));
 
+    // Buscar dados do comprador para a emissão do Pix
+    const userDb = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { fullName: true, email: true, cpf: true, phone: true },
+    });
+
     // Criar pedido prévio para obter o ID
     const initialOrder = await prisma.order.create({
       data: {
@@ -61,17 +66,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Carregar configuração da chave Pix recebedora do sistema
-    const pixConfig = await getPixConfig();
-
-    // Gerar Pix real QR code base64 e copia e cola com o ID do pedido
-    const pixData = await generatePixData(
-      totalAmount,
-      initialOrder.id,
-      pixConfig.receiverKey,
-      pixConfig.merchantName,
-      pixConfig.merchantCity
-    );
+    // Gerar Pix real (Mercado Pago, Asaas ou EMV Central Bank com chave do admin)
+    const pixData = await createPixCharge({
+      orderId: initialOrder.id,
+      amount: totalAmount,
+      buyerName: userDb?.fullName || user.fullName,
+      buyerEmail: userDb?.email || user.email,
+      buyerCpf: userDb?.cpf || (pixKey.includes("@") ? "" : pixKey),
+      buyerPhone: userDb?.phone,
+      description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
+    });
 
     const order = await prisma.order.update({
       where: { id: initialOrder.id },

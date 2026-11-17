@@ -217,22 +217,22 @@ export default function AdminLayout({
       {/* SIDEBAR LATERAL: bg-white dark:bg-[#0B1120] border-slate-200 dark:border-slate-800 */}
       {/* ========================================================= */}
 
-      {/* Backdrop Mobile */}
+      {/* Backdrop Mobile e Tablet (< 1024px) */}
       {mobileSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-2xs z-40 lg:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 lg:hidden animate-fade-in"
           onClick={() => setMobileSidebarOpen(false)}
         ></div>
       )}
 
-      {/* Barra Lateral com suporte para arrastar e recolher pro lado */}
+      {/* Barra Lateral: Drawer Retrátil em Celular e Tablet (< 1024px) / Docked com Recolhimento no Desktop */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-[#0B1120] border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 ease-in-out shadow-sm ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 sm:w-80 bg-white dark:bg-[#0B1120] border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-xs ${
           mobileSidebarOpen
             ? "translate-x-0"
             : desktopSidebarCollapsed
             ? "-translate-x-full"
-            : "translate-x-0 -translate-x-full lg:translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Topo da Sidebar: Logo Bolinha da Sorte Oficial + Selo Centro de Comando v2.0 */}
@@ -399,11 +399,11 @@ export default function AdminLayout({
         {/* Header Superior Limpo: bg-white/95 dark:bg-[#0B1120]/95 border-slate-200/80 dark:border-slate-800 */}
         <header className="sticky top-0 z-30 h-16 bg-white/95 dark:bg-[#0B1120]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-3">
-            {/* Botão de Toggle da Sidebar (Mobile & Desktop) */}
+            {/* Botão de Toggle da Sidebar (Mobile, Tablet & Desktop) */}
             <button
               type="button"
               onClick={() => {
-                if (window.innerWidth < 1024) {
+                if (typeof window !== "undefined" && window.innerWidth < 1024) {
                   setMobileSidebarOpen(true);
                 } else {
                   toggleDesktopSidebar();
@@ -417,13 +417,19 @@ export default function AdminLayout({
                   : "Recolher menu lateral para o lado"
               }
             >
-              {desktopSidebarCollapsed ? (
-                <PanelLeftOpen className="w-5 h-5 text-[#10B981]" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
-              <span className="hidden xl:inline text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {desktopSidebarCollapsed ? "Expandir" : "Recolher"}
+              <span className="lg:hidden flex items-center gap-1.5">
+                <Menu className="w-5 h-5 text-[#10B981]" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Menu</span>
+              </span>
+              <span className="hidden lg:flex items-center gap-1.5">
+                {desktopSidebarCollapsed ? (
+                  <PanelLeftOpen className="w-5 h-5 text-[#10B981]" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+                <span className="hidden xl:inline text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  {desktopSidebarCollapsed ? "Expandir" : "Recolher"}
+                </span>
               </span>
             </button>
 

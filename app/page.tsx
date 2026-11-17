@@ -306,7 +306,7 @@ export default function HomePage() {
                     <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
                       Escolha rápida de cotas
                     </span>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <Link
                         href={`/campanha/${heroCampaign.id}?qty=50`}
                         className="py-2 rounded-xl bg-neutral-100 hover:bg-emerald-100 hover:text-emerald-800 text-xs font-bold text-neutral-800 text-center transition-all shadow-sm"

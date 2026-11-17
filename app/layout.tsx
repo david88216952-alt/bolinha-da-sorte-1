@@ -36,7 +36,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#F2F4F7] dark:bg-[#090D16] text-[#191C1E] dark:text-slate-100 transition-colors duration-200">
+      <body className="min-h-full flex flex-col bg-[#F2F4F7] dark:bg-[#090D16] text-[#191C1E] dark:text-slate-100 transition-colors duration-200 overflow-x-hidden">
         <ThemeProvider>
           <ConfirmDialogProvider>
             <ClientLayoutShell>{children}</ClientLayoutShell>

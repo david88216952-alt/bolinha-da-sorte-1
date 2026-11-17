@@ -734,7 +734,7 @@ export default function CampaignPage() {
                   <span className="text-emerald-700 font-bold">Quanto mais cotas, mais chances!</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                   {/* +30 cotas */}
                   <button
                     type="button"
