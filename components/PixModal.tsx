@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Copy,
   Check,
@@ -11,9 +11,16 @@ import {
   Loader2,
   Zap,
   Key,
+  QrCode,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
+import {
+  generatePixCopyPaste,
+  OFFICIAL_PIX_KEY,
+  OFFICIAL_PIX_KEY_DISPLAY,
+} from "@/lib/pix-emv";
 
 interface PixModalProps {
   isOpen: boolean;
@@ -34,6 +41,19 @@ export default function PixModal({
   const [paidDetails, setPaidDetails] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutos em segundos
   const [currentPixCopyPaste, setCurrentPixCopyPaste] = useState(order?.pixCopyPaste || "");
+
+  // Gerador oficial de BR Code EMV (com cálculo CRC16) usando a chave +5575991638134 e o valor exato do pedido
+  const copyPasteString = useMemo(() => {
+    if (currentPixCopyPaste && currentPixCopyPaste.includes("br.gov.bcb.pix")) {
+      return currentPixCopyPaste;
+    }
+    if (order?.pixCopyPaste && order.pixCopyPaste.includes("br.gov.bcb.pix")) {
+      return order.pixCopyPaste;
+    }
+    const amount = Number(order?.totalAmount || 0);
+    const txId = (order?.id || "BOLINHA").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
+    return generatePixCopyPaste(amount, txId, OFFICIAL_PIX_KEY);
+  }, [currentPixCopyPaste, order?.pixCopyPaste, order?.totalAmount, order?.id]);
 
   useEffect(() => {
     if (!isOpen || !order) return;
@@ -97,8 +117,6 @@ export default function PixModal({
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
-  const copyPasteString = currentPixCopyPaste || order.pixCopyPaste || "";
 
   const handleCopy = () => {
     if (!copyPasteString) return;
@@ -242,6 +260,28 @@ export default function PixModal({
                 </p>
               </div>
 
+              {/* QR Code Real Gerado Dinamicamente (qrcode.react) */}
+              <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <QrCode className="w-4 h-4 text-emerald-600 dark:text-[#10B981]" />
+                  <span>QR Code Pix para Pagamento</span>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl shadow-md border border-slate-200 flex items-center justify-center">
+                  <QRCodeSVG
+                    value={copyPasteString}
+                    size={180}
+                    level="M"
+                    includeMargin={false}
+                    className="w-40 h-40 sm:w-44 sm:h-44"
+                  />
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium text-center">
+                  Aponte a câmera do aplicativo do seu banco para o QR Code acima
+                </p>
+              </div>
+
               {/* Cartão de Identificação da Chave Pix Recebedora Oficial */}
               <div className="p-3.5 sm:p-4 bg-slate-900 dark:bg-black border border-slate-800 rounded-2xl flex items-center justify-between text-xs shadow-sm">
                 <div className="flex items-center gap-3">
@@ -253,7 +293,7 @@ export default function PixModal({
                       Chave Pix Recebedora Oficial
                     </span>
                     <span className="font-mono font-black text-white text-sm sm:text-base tracking-wide block">
-                      75991638134
+                      {OFFICIAL_PIX_KEY_DISPLAY}
                     </span>
                     <span className="text-[10px] text-emerald-400 block font-medium">
                       Beneficiário: BOLINHA DA SORTE OFICIAL
@@ -264,7 +304,7 @@ export default function PixModal({
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText("75991638134");
+                    navigator.clipboard.writeText(OFFICIAL_PIX_KEY_DISPLAY);
                     setCopiedKey(true);
                     setTimeout(() => setCopiedKey(false), 2500);
                   }}
@@ -340,9 +380,9 @@ export default function PixModal({
                 {/* Instruções de Pagamento Rápidas */}
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
                   <p className="font-bold text-slate-800 dark:text-slate-200">Como pagar:</p>
-                  <p>1. Clique no botão verde <strong>Copiar Código Pix</strong> acima.</p>
-                  <p>2. Abra o app do seu banco e acesse a opção <strong>Pix &gt; Pix Copia e Cola</strong>.</p>
-                  <p>3. Cole o código gerado com o valor exato de <strong>R$ {Number(order.totalAmount).toFixed(2).replace(".", ",")}</strong> e confirme o pagamento.</p>
+                  <p>1. Escaneie o <strong>QR Code</strong> ou clique no botão verde <strong>Copiar Código Pix</strong>.</p>
+                  <p>2. Abra o app do seu banco e acesse a opção <strong>Pix &gt; Ler QR Code</strong> ou <strong>Pix Copia e Cola</strong>.</p>
+                  <p>3. Confira o valor de <strong>R$ {Number(order.totalAmount).toFixed(2).replace(".", ",")}</strong> e confirme o pagamento.</p>
                 </div>
               </div>
 
