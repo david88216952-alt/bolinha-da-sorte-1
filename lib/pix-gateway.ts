@@ -185,7 +185,7 @@ export async function createPixCharge(options: CreatePixOptions): Promise<PixPay
  */
 export async function checkGatewayPaymentStatus(externalPaymentId: string): Promise<boolean> {
   const accessToken = (process.env.PIX_ACCESS_TOKEN || "").trim();
-  if (!externalPaymentId || !accessToken) return false;
+  if (!externalPaymentId || !accessToken || externalPaymentId.startsWith("PIX-")) return false;
 
   const provider = (process.env.PIX_PROVIDER || "").toUpperCase();
   const isMercadoPago =

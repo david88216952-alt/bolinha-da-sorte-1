@@ -41,8 +41,6 @@ export default function PixModal({
   const [paidDetails, setPaidDetails] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutos em segundos
   const [currentPixCopyPaste, setCurrentPixCopyPaste] = useState(order?.pixCopyPaste || "");
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [testingPayment, setTestingPayment] = useState(false);
 
   // Gerador oficial de BR Code EMV (com cálculo CRC16) usando a chave +5575991638134 e o valor exato do pedido
   const pixCopyPaste = useMemo(() => {
@@ -66,11 +64,10 @@ export default function PixModal({
     setCurrentPixCopyPaste(order.pixCopyPaste || "");
     setPaidDetails(order.paymentStatus === "PAID" ? order : null);
 
-    // Consulta inicial ativa na rota /api/orders/[id]/status
+    // Consulta inicial ativa na rota oficial /api/orders/[id]/status
     fetch(`/api/orders/${order.id}/status`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.isTestMode !== undefined) setIsTestMode(data.isTestMode);
         if (data.isPaid || data.order?.paymentStatus === "PAID") {
           setIsPaid(true);
           setPaidDetails(data.order);
@@ -80,15 +77,12 @@ export default function PixModal({
       })
       .catch(() => {});
 
-    // Polling automático a cada 3 segundos: consulta ativamente o status na API do gateway
+    // Polling contínuo automático a cada 3 segundos: consulta ativamente o status na API oficial do gateway
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${order.id}/status`);
         const data = await res.json();
         if (res.ok) {
-          if (data.isTestMode !== undefined) {
-            setIsTestMode(data.isTestMode);
-          }
           if (data.order?.pixCopyPaste && data.order.pixCopyPaste !== currentPixCopyPaste) {
             setCurrentPixCopyPaste(data.order.pixCopyPaste);
           }
@@ -145,27 +139,6 @@ export default function PixModal({
     setTimeout(() => setCopied(false), 3500);
   };
 
-  const handleConfirmTestPayment = async () => {
-    setTestingPayment(true);
-    try {
-      const res = await fetch(`/api/orders/${order.id}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (res.ok && (data.isPaid || data.order?.paymentStatus === "PAID")) {
-        setIsPaid(true);
-        setPaidDetails(data.order);
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        if (onPaymentConfirmed) onPaymentConfirmed();
-      }
-    } catch (err) {
-      console.error("Test payment error:", err);
-    } finally {
-      setTestingPayment(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
@@ -204,7 +177,7 @@ export default function PixModal({
         {/* Scrollable Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
           {isPaid ? (
-            /* Tela de Sucesso Verde após Confirmação Bancária */
+            /* Tela de Sucesso Verde após Confirmação Bancária Oficial */
             <div className="text-center py-4 sm:py-6 space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="w-10 h-10" />
@@ -399,7 +372,7 @@ export default function PixModal({
                 </p>
               </div>
 
-              {/* 2. Botão Único de Cópia (Sem a caixa de código longo na tela) */}
+              {/* 2. Botão Único de Cópia Oficial */}
               <div className="space-y-3 pt-1">
                 <button
                   type="button"
@@ -422,28 +395,6 @@ export default function PixModal({
                     </>
                   )}
                 </button>
-
-                {/* Botão de Homologação / Teste quando PIX_ACCESS_TOKEN não está no .env */}
-                {isTestMode && (
-                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/80 rounded-2xl text-center space-y-2 shadow-2xs">
-                    <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 block">
-                      Ambiente de Homologação Local (Sem Chave Oficial no .env)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleConfirmTestPayment}
-                      disabled={testingPayment}
-                      className="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
-                    >
-                      {testingPayment ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                      )}
-                      <span>Confirmar Pagamento de Teste</span>
-                    </button>
-                  </div>
-                )}
 
                 {/* Bloco 'Como pagar:' */}
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
