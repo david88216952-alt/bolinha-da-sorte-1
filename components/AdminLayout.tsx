@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import AdminAccessDenied from "./AdminAccessDenied";
 import ThemeToggle from "./ThemeToggle";
-import Logo from "./Logo";
+import BrandLogo from "./BrandLogo";
 
 interface AdminUser {
   id: string;
@@ -243,7 +243,7 @@ export default function AdminLayout({
               className="flex items-center gap-2.5 group flex-1 min-w-0"
               onClick={() => setMobileSidebarOpen(false)}
             >
-              <Logo size="sm" showText={false} variant="pill" className="p-1 shrink-0" />
+              <BrandLogo size="sm" showText={false} />
               <div className="min-w-0">
                 <span className="text-slate-900 dark:text-white font-extrabold text-xs tracking-tight block truncate">
                   CENTRO DE COMANDO

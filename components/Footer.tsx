@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShieldAlert, ShieldCheck, Lock, QrCode } from "lucide-react";
 import { WhatsAppIcon } from "@/components/SocialIcons";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Footer() {
   return (
@@ -56,11 +57,7 @@ export default function Footer() {
           {/* Brand Col */}
           <div className="md:col-span-5 flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="Bolinha da Sorte"
-                className="h-10 w-auto object-contain"
-              />
+              <BrandLogo href="/" size="md" contrast="dark" />
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed max-w-sm">
               A melhor e mais confiável plataforma de rifas e sorteios online do Brasil.

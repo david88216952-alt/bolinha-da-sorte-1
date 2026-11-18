@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Lock, Mail, Phone, User as UserIcon, CreditCard, AlertCircle } from "lucide-react";
-import Logo from "./Logo";
+import BrandLogo from "./BrandLogo";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -104,7 +104,7 @@ export default function AuthModal({
         {/* Header Bar */}
         <div className="bg-[#000000] p-6 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Logo size="sm" showText={false} variant="pill" className="p-1 shrink-0" />
+            <BrandLogo size="sm" showText={false} />
             <div>
               <h3 className="font-extrabold text-base tracking-tight">
                 {mode === "login" ? "Entrar na sua Conta" : "Criar Nova Conta"}

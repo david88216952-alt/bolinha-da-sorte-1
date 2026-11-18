@@ -10,6 +10,8 @@ export const metadata: Metadata = {
     "Participe dos melhores sorteios com cotas a partir de R$ 0,02, pagamento instantâneo via Pix, baixa automática e sorteio 100% auditado pela Loteria Federal.",
   icons: {
     icon: "/images/logo-bs.png",
+    shortcut: "/images/logo-bs.png",
+    apple: "/images/logo-bs.png",
   },
 };
 

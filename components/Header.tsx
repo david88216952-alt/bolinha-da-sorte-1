@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import AuthModal from "./AuthModal";
 import ThemeToggle from "./ThemeToggle";
-import Logo from "./Logo";
+import BrandLogo from "./BrandLogo";
 
 interface UserProfile {
   id: string;
@@ -79,7 +79,7 @@ export default function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#000000] border-b border-slate-200 dark:border-neutral-900 shadow-xs dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
           {/* 1. Logo Oficial Bolinha da Sorte (BS) */}
-          <Logo href="/" size="md" variant="auto" />
+          <BrandLogo href="/" size="md" />
 
           {/* 2. Menu Desktop e Tablet (> 768px): Todos os links visíveis na horizontal */}
           <nav className="hidden md:flex items-center gap-1.5 lg:gap-3 py-2">

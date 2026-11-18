@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ShieldCheck, Lock, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 import AdminAccessDenied from "@/components/AdminAccessDenied";
 import ThemeToggle from "@/components/ThemeToggle";
-import Logo from "@/components/Logo";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -102,7 +102,7 @@ export default function AdminLoginPage() {
         {/* Logo BS Oficial de Alta Resolução e Selo de Acesso Restrito */}
         <div className="text-center space-y-3">
           <div className="inline-block transition-transform hover:scale-105">
-            <Logo href="/" size="lg" variant="pill" />
+            <BrandLogo href="/" size="lg" variant="admin" />
           </div>
 
           <div className="pt-2">
