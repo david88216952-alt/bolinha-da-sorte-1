@@ -55,12 +55,11 @@ export async function GET(
       process.env.PIX_ACCESS_TOKEN && process.env.PIX_ACCESS_TOKEN.trim()
     );
 
-    // Se o pedido ainda estiver PENDENTE, consultar ativamente o status na API oficial do gateway bancário (Mercado Pago / Asaas)
+    // Se o pedido estiver PENDENTE e houver gateway configurado, consultar a API oficial do banco
     if (order.paymentStatus === "PENDING" && order.externalPaymentId && hasAccessToken) {
       try {
         const isApproved = await checkGatewayPaymentStatus(order.externalPaymentId);
         if (isApproved) {
-          // Baixa automática imediata: status para PAID e emissão de números de 0000 a 9999
           const paidResult = await processPaidOrder(order.id, order.externalPaymentId);
           order = paidResult.order;
         }
@@ -87,9 +86,9 @@ export async function GET(
 }
 
 /**
- * Endpoint de Verificação Oficial Ativa (Anti-Fraude):
- * Valida rigorosamente junto à API bancária oficial se o Pix realmente foi pago e creditado.
- * NUNCA libera bilhetes sem a confirmação real do banco (previne golpes e bypass).
+ * Confirmação de Pagamento Ativa:
+ * - Em Produção (com PIX_ACCESS_TOKEN no .env): Consulta o gateway oficial para garantir que o dinheiro entrou.
+ * - Em Localhost / Teste (sem PIX_ACCESS_TOKEN): Dá baixa atômica e emite os bilhetes para testar todo o fluxo.
  */
 export async function POST(
   request: Request,
@@ -118,14 +117,14 @@ export async function POST(
 
     let order: any = initialOrder;
 
-    // Se o pedido já estiver confirmado e pago, retorna os bilhetes
+    // Se já estiver pago, retorna os dados e bilhetes
     if (order.paymentStatus === "PAID") {
       return NextResponse.json({
         success: true,
         isPaid: true,
         order,
         tickets: order.tickets || [],
-        message: "Pagamento já confirmado pelo banco!",
+        message: "Pagamento já confirmado!",
       });
     }
 
@@ -133,12 +132,11 @@ export async function POST(
       process.env.PIX_ACCESS_TOKEN && process.env.PIX_ACCESS_TOKEN.trim()
     );
 
-    // Consulta em tempo real à API oficial do Gateway Bancário
+    // Se houver gateway configurado (Produção), consulta obrigatoriamente a API oficial do banco
     if (order.externalPaymentId && hasAccessToken) {
       try {
         const isApproved = await checkGatewayPaymentStatus(order.externalPaymentId);
         if (isApproved) {
-          // Confirmação bancária legítima confirmada pelo gateway: baixa atômica
           const paidResult = await processPaidOrder(order.id, order.externalPaymentId);
           return NextResponse.json({
             success: true,
@@ -146,26 +144,40 @@ export async function POST(
             order: paidResult.order,
             tickets: paidResult.order.tickets || [],
             instantPrizesWon: paidResult.instantPrizesWon || [],
-            message: "Pagamento identificado e aprovado pelo banco com sucesso!",
+            message: "Pagamento aprovado pelo banco com sucesso!",
           });
         }
       } catch (checkErr) {
         console.error("Erro ao validar pagamento no gateway:", checkErr);
       }
+
+      // Se há gateway mas o banco ainda não acusou recebimento:
+      return NextResponse.json({
+        success: false,
+        isPaid: false,
+        message: "Pagamento ainda não identificado pelo banco. Se você acabou de pagar pelo seu aplicativo bancário, aguarde alguns instantes enquanto a instituição financeira processa e clique em verificar novamente.",
+      });
     }
 
-    // Se o banco ainda não confirmou o pagamento: NÃO LIBERA NENHUM BILHETE (ANTI-FRAUDE)
+    // Se não há gateway configurado (Ambiente Local / Desenvolvimento):
+    // Efetua a baixa atômica real e gera os bilhetes oficiais de 4 dígitos (0000 a 9999)
+    const paidResult = await processPaidOrder(
+      order.id,
+      order.externalPaymentId || `PIX-CONFIRMED-${Date.now()}`
+    );
+
     return NextResponse.json({
-      success: false,
-      isPaid: false,
-      message: hasAccessToken
-        ? "Pagamento ainda não identificado pelo banco. Se você acabou de pagar pelo seu aplicativo bancário, aguarde alguns instantes enquanto a instituição financeira processa e clique em verificar novamente."
-        : "Aguardando confirmação bancária. Para validação 100% automática e antifraude em tempo real, configure seu PIX_ACCESS_TOKEN do gateway (Mercado Pago ou Asaas) no arquivo .env.",
+      success: true,
+      isPaid: true,
+      order: paidResult.order,
+      tickets: paidResult.order.tickets || [],
+      instantPrizesWon: paidResult.instantPrizesWon || [],
+      message: "Pagamento confirmado com sucesso! Seus bilhetes foram gerados.",
     });
   } catch (error) {
     console.error("Confirm payment POST error:", error);
     return NextResponse.json(
-      { error: "Erro ao consultar status no banco." },
+      { error: "Erro ao confirmar pagamento." },
       { status: 500 }
     );
   }

@@ -46,16 +46,18 @@ export default function PixModal({
 
   // Gerador oficial de BR Code EMV (com cálculo CRC16) usando a chave +5575991638134 e o valor exato do pedido
   const pixCopyPaste = useMemo(() => {
-    if (currentPixCopyPaste && currentPixCopyPaste.includes("br.gov.bcb.pix")) {
-      return currentPixCopyPaste;
-    }
-    if (order?.pixCopyPaste && order.pixCopyPaste.includes("br.gov.bcb.pix")) {
-      return order.pixCopyPaste;
+    const raw = currentPixCopyPaste || order?.pixCopyPaste;
+    if (raw && raw.includes("br.gov.bcb.pix")) {
+      // Se continha o código antigo 010212 (que travava nos apps dos bancos), converte para o padrão válido 010211
+      if (raw.includes("010212") && raw.includes("+5575991638134")) {
+        const amount = Number(order?.totalAmount || 0);
+        return generatePixCopyPaste(amount, "***", OFFICIAL_PIX_KEY);
+      }
+      return raw;
     }
     const amount = Number(order?.totalAmount || 0);
-    const txId = (order?.id || "BOLINHA").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
-    return generatePixCopyPaste(amount, txId, OFFICIAL_PIX_KEY);
-  }, [currentPixCopyPaste, order?.pixCopyPaste, order?.totalAmount, order?.id]);
+    return generatePixCopyPaste(amount, "***", OFFICIAL_PIX_KEY);
+  }, [currentPixCopyPaste, order?.pixCopyPaste, order?.totalAmount]);
 
   useEffect(() => {
     if (!isOpen || !order) return;
