@@ -72,6 +72,6 @@ export function formatCurrency(value: number): string {
 /**
  * Formats ticket number with leading zeros (e.g. 30627 -> "0030627")
  */
-export function formatTicketNumber(num: number, digits: number = 7): string {
+export function formatTicketNumber(num: number, digits: number = 4): string {
   return num.toString().padStart(digits, "0");
 }

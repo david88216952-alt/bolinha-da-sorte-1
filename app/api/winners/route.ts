@@ -73,12 +73,12 @@ export async function POST(request: Request) {
     }
 
     const cleanNumber = winningTicketNumber.trim();
-    const paddedNumber = cleanNumber.padStart(7, "0");
+    const padded4 = cleanNumber.padStart(4, "0");
 
     const ticket = await prisma.ticket.findFirst({
       where: {
         campaignId,
-        ticketNumber: { in: [cleanNumber, paddedNumber] },
+        ticketNumber: { in: [cleanNumber, padded4, cleanNumber.padStart(7, "0")] },
       },
       include: {
         order: true,

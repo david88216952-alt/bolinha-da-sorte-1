@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { createPixCharge } from "@/lib/pix-gateway";
+import {
+  createPixCharge,
+  checkGatewayPaymentStatus,
+  processPaidOrder,
+} from "@/lib/pix-gateway";
 
 export async function POST(request: Request) {
   try {
@@ -146,6 +150,29 @@ export async function GET(request: Request) {
 
     if (!targetUserId) {
       return NextResponse.json({ orders: [] });
+    }
+
+    // Se houver pedidos pendentes com externalPaymentId, consultar ativamente o gateway oficial
+    const hasAccessToken = !!(
+      process.env.PIX_ACCESS_TOKEN && process.env.PIX_ACCESS_TOKEN.trim()
+    );
+    if (hasAccessToken) {
+      try {
+        const pendingOrders = await prisma.order.findMany({
+          where: { userId: targetUserId, paymentStatus: "PENDING" },
+          select: { id: true, externalPaymentId: true },
+        });
+        for (const po of pendingOrders) {
+          if (po.externalPaymentId) {
+            const isApproved = await checkGatewayPaymentStatus(po.externalPaymentId);
+            if (isApproved) {
+              await processPaidOrder(po.id, po.externalPaymentId);
+            }
+          }
+        }
+      } catch (checkErr) {
+        console.error("Error refreshing pending orders with gateway:", checkErr);
+      }
     }
 
     const orders = await prisma.order.findMany({

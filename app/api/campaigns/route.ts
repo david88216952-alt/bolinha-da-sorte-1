@@ -54,7 +54,7 @@ export async function GET(request: Request) {
         });
 
         const soldTickets = paidAggregate._sum.quantity || c._count.tickets || 0;
-        const totalTickets = c.totalTickets || 1000000;
+        const totalTickets = c.totalTickets || 10000;
         const percentSold = Math.min(100, Math.round((soldTickets / totalTickets) * 100));
 
         let parsedPackages = [];
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
         description: finalDescription,
         prizeValue: Number(prizeValue),
         ticketPrice: Number(ticketPrice),
-        totalTickets: Number(totalTickets) || 1000000,
+        totalTickets: Number(totalTickets) || 10000,
         promoPackages:
           typeof promoPackages === "string"
             ? promoPackages

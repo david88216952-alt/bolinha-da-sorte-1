@@ -273,19 +273,20 @@ export async function processPaidOrder(orderId: string, externalPaymentId?: stri
     // Se já havia bilhetes criados anteriormente (ex: retry)
     if (order.tickets.length > 0) {
       return {
-        order: updatedOrder,
+        order: { ...updatedOrder, tickets: order.tickets },
         ticketsCreated: order.tickets.length,
         instantPrizesWon: [],
       };
     }
 
-    // 2. Buscar último número de bilhete emitido para esta campanha
-    const lastTicket = await tx.ticket.findFirst({
+    // 2. Buscar todos os bilhetes já emitidos para esta campanha para garantir unicidade absoluta (0000 a 9999)
+    const existingTickets = await tx.ticket.findMany({
       where: { campaignId: order.campaignId },
-      orderBy: { ticketNumber: "desc" },
+      select: { ticketNumber: true },
     });
 
-    let nextNumber = lastTicket ? parseInt(lastTicket.ticketNumber, 10) + 1 : 30600;
+    const usedNumbers = new Set(existingTickets.map((t) => t.ticketNumber));
+    const maxCapacity = Math.min(10000, order.campaign?.totalTickets || 10000);
 
     // 3. Buscar cotas premiadas ativas desta campanha para checagem imediata
     const availableInstantPrizes = await tx.instantPrize.findMany({
@@ -302,9 +303,25 @@ export async function processPaidOrder(orderId: string, externalPaymentId?: stri
     const generatedTickets = [];
     const hitInstantPrizes = [];
 
+    // Gerar números de 4 dígitos (0000 a 9999) sequenciais sem duplicidade
+    let currentCandidate = 0;
+
     for (let i = 0; i < order.quantity; i++) {
-      const ticketNumStr = nextNumber.toString().padStart(7, "0");
-      nextNumber++;
+      while (
+        currentCandidate < maxCapacity &&
+        usedNumbers.has(currentCandidate.toString().padStart(4, "0"))
+      ) {
+        currentCandidate++;
+      }
+
+      if (currentCandidate >= maxCapacity) {
+        // Capacidade máxima da campanha atingida (10.000 cotas)
+        break;
+      }
+
+      const ticketNumStr = currentCandidate.toString().padStart(4, "0");
+      usedNumbers.add(ticketNumStr);
+      currentCandidate++;
 
       const instantPrize = instantPrizesMap.get(ticketNumStr);
       const isInstant = !!instantPrize;
@@ -333,9 +350,11 @@ export async function processPaidOrder(orderId: string, externalPaymentId?: stri
     }
 
     // 4. Criação em lote dos bilhetes
-    await tx.ticket.createMany({
-      data: generatedTickets,
-    });
+    if (generatedTickets.length > 0) {
+      await tx.ticket.createMany({
+        data: generatedTickets,
+      });
+    }
 
     // Buscar os bilhetes criados para compor o retorno
     const tickets = await tx.ticket.findMany({

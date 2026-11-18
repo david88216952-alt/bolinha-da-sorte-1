@@ -25,12 +25,12 @@ export async function GET(request: Request) {
     }
 
     const cleanNumber = ticketNumber.trim();
-    const paddedNumber = cleanNumber.padStart(7, "0");
+    const padded4 = cleanNumber.padStart(4, "0");
 
     const ticket = await prisma.ticket.findFirst({
       where: {
         campaignId,
-        ticketNumber: { in: [cleanNumber, paddedNumber] },
+        ticketNumber: { in: [cleanNumber, padded4, cleanNumber.padStart(7, "0")] },
       },
       include: {
         user: {

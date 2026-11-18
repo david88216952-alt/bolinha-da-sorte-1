@@ -33,7 +33,7 @@ export default function AdminCampanhasPage() {
   const [description, setDescription] = useState("");
   const [prizeValue, setPrizeValue] = useState<number | string>(350000);
   const [ticketPrice, setTicketPrice] = useState<number | string>(0.06);
-  const [totalTickets, setTotalTickets] = useState<number | string>(1000000);
+  const [totalTickets, setTotalTickets] = useState<number | string>(10000);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [promoPackages, setPromoPackages] = useState<number[]>([30, 50, 100, 2000]);
@@ -72,7 +72,7 @@ export default function AdminCampanhasPage() {
     setDescription("");
     setPrizeValue(350000);
     setTicketPrice(0.06);
-    setTotalTickets(1000000);
+    setTotalTickets(10000);
     setCoverImageUrl("");
     setGalleryImages([]);
     setPromoPackages([30, 50, 100, 2000]);
@@ -88,7 +88,7 @@ export default function AdminCampanhasPage() {
     setDescription(camp.description || "");
     setPrizeValue(camp.prizeValue || 0);
     setTicketPrice(camp.ticketPrice || 0.06);
-    setTotalTickets(camp.totalTickets || 1000000);
+    setTotalTickets(camp.totalTickets || 10000);
     setCoverImageUrl(camp.coverImageUrl || "");
     setGalleryImages(camp.galleryImages || []);
 
@@ -772,14 +772,14 @@ export default function AdminCampanhasPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Total de Bilhetes da Rifa
+                        Total de Bilhetes da Rifa (Padrão 10.000 cotas: 0000 a 9999)
                       </label>
                       <input
                         type="number"
                         required
                         value={totalTickets}
                         onChange={(e) => setTotalTickets(e.target.value)}
-                        placeholder="1000000"
+                        placeholder="10000"
                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#10B981]"
                       />
                     </div>

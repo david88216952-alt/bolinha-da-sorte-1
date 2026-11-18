@@ -51,7 +51,7 @@ export async function GET(
     });
 
     const soldTickets = paidAggregate._sum.quantity || campaign._count.tickets || 0;
-    const totalTickets = campaign.totalTickets || 1000000;
+    const totalTickets = campaign.totalTickets || 10000;
     const percentSold = Math.min(100, Math.round((soldTickets / totalTickets) * 100));
 
     // Ranking de Compradores: Top compradores daquela campanha ordenados pela soma de bilhetes pagos (SUM(quantity))
