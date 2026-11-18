@@ -371,7 +371,7 @@ export default function PixModal({
                   )}
                 </button>
 
-                {/* Botão Oficial de Confirmação de Pagamento */}
+                {/* Botão Oficial de Confirmação de Pagamento via Banco */}
                 <button
                   type="button"
                   onClick={handleConfirmPayment}
@@ -381,20 +381,21 @@ export default function PixModal({
                   {isVerifying ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin text-[#10B981]" />
-                      <span>Verificando pagamento no banco...</span>
+                      <span>Consultando recebimento no banco...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-                      <span>Já fiz o pagamento / Confirmar</span>
+                      <span>Já fiz o pagamento / Verificar no Banco</span>
                     </>
                   )}
                 </button>
 
                 {statusMessage && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold text-center bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-800">
-                    {statusMessage}
-                  </p>
+                  <div className="text-xs text-amber-700 dark:text-amber-300 font-semibold text-center bg-amber-50 dark:bg-amber-950/60 p-3 rounded-xl border border-amber-300 dark:border-amber-700/80 shadow-xs flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>{statusMessage}</span>
+                  </div>
                 )}
               </div>
 

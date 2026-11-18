@@ -86,6 +86,11 @@ export async function GET(
   }
 }
 
+/**
+ * Endpoint de Verificação Oficial Ativa (Anti-Fraude):
+ * Valida rigorosamente junto à API bancária oficial se o Pix realmente foi pago e creditado.
+ * NUNCA libera bilhetes sem a confirmação real do banco (previne golpes e bypass).
+ */
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string }> }
@@ -113,13 +118,14 @@ export async function POST(
 
     let order: any = initialOrder;
 
-    // Se já estiver pago, retorna sucesso de imediato
+    // Se o pedido já estiver confirmado e pago, retorna os bilhetes
     if (order.paymentStatus === "PAID") {
       return NextResponse.json({
         success: true,
         isPaid: true,
         order,
         tickets: order.tickets || [],
+        message: "Pagamento já confirmado pelo banco!",
       });
     }
 
@@ -127,42 +133,39 @@ export async function POST(
       process.env.PIX_ACCESS_TOKEN && process.env.PIX_ACCESS_TOKEN.trim()
     );
 
-    // Se houver gateway configurado, tentar checar aprovação
+    // Consulta em tempo real à API oficial do Gateway Bancário
     if (order.externalPaymentId && hasAccessToken) {
       try {
         const isApproved = await checkGatewayPaymentStatus(order.externalPaymentId);
         if (isApproved) {
+          // Confirmação bancária legítima confirmada pelo gateway: baixa atômica
           const paidResult = await processPaidOrder(order.id, order.externalPaymentId);
           return NextResponse.json({
             success: true,
             isPaid: true,
             order: paidResult.order,
             tickets: paidResult.order.tickets || [],
+            instantPrizesWon: paidResult.instantPrizesWon || [],
+            message: "Pagamento identificado e aprovado pelo banco com sucesso!",
           });
         }
       } catch (checkErr) {
-        console.error("Erro ao consultar gateway no POST confirm:", checkErr);
+        console.error("Erro ao validar pagamento no gateway:", checkErr);
       }
     }
 
-    // Confirmação ativa do pagamento: efetua a baixa e gera bilhetes de 4 dígitos (0000 a 9999)
-    const paidResult = await processPaidOrder(
-      order.id,
-      order.externalPaymentId || `PIX-CONFIRM-${Date.now()}`
-    );
-
+    // Se o banco ainda não confirmou o pagamento: NÃO LIBERA NENHUM BILHETE (ANTI-FRAUDE)
     return NextResponse.json({
-      success: true,
-      isPaid: true,
-      order: paidResult.order,
-      tickets: paidResult.order.tickets || [],
-      instantPrizesWon: paidResult.instantPrizesWon || [],
-      message: "Pagamento confirmado com sucesso!",
+      success: false,
+      isPaid: false,
+      message: hasAccessToken
+        ? "Pagamento ainda não identificado pelo banco. Se você acabou de pagar pelo seu aplicativo bancário, aguarde alguns instantes enquanto a instituição financeira processa e clique em verificar novamente."
+        : "Aguardando confirmação bancária. Para validação 100% automática e antifraude em tempo real, configure seu PIX_ACCESS_TOKEN do gateway (Mercado Pago ou Asaas) no arquivo .env.",
     });
   } catch (error) {
     console.error("Confirm payment POST error:", error);
     return NextResponse.json(
-      { error: "Erro ao confirmar pagamento." },
+      { error: "Erro ao consultar status no banco." },
       { status: 500 }
     );
   }
