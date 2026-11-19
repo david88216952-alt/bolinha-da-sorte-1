@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Layers,
+  TrendingUp,
   CreditCard,
   Users,
   Trophy,
@@ -155,7 +156,7 @@ export default function AdminLayout({
     return null;
   }
 
-  // 5 Módulos Principais do Centro de Comando v2.0
+  // Módulos Principais do Centro de Comando v2.0
   const navModules = [
     {
       href: "/admin/dashboard",
@@ -166,10 +167,17 @@ export default function AdminLayout({
     },
     {
       href: "/admin/campanhas",
-      label: "Rifas e Prêmios",
-      badge: "Catálogo",
+      label: "Gerenciar Campanhas",
+      badge: "Imagens e Prêmios",
       icon: Layers,
       active: pathname.startsWith("/admin/campanhas"),
+    },
+    {
+      href: "/admin/desempenho",
+      label: "Desempenho",
+      badge: "Mais e Menos Vendidas",
+      icon: TrendingUp,
+      active: pathname.startsWith("/admin/desempenho"),
     },
     {
       href: "/admin/pedidos",
