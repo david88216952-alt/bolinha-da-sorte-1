@@ -10,17 +10,11 @@ import {
   ArrowRight,
   Loader2,
   Zap,
-  Key,
   Sparkles,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  generatePixCopyPaste,
-  OFFICIAL_PIX_KEY,
-  OFFICIAL_PIX_KEY_DISPLAY,
-} from "@/lib/pix-emv";
 
 interface PixModalProps {
   isOpen: boolean;
@@ -36,7 +30,6 @@ export default function PixModal({
   onPaymentConfirmed,
 }: PixModalProps) {
   const [copied, setCopied] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paidDetails, setPaidDetails] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutos em segundos
@@ -44,20 +37,10 @@ export default function PixModal({
   const [isVerifying, setIsVerifying] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Gerador oficial de BR Code EMV (com cálculo CRC16) usando a chave +5575991638134 e o valor exato do pedido
+  // Código Pix oficial gerado pelo Mercado Pago
   const pixCopyPaste = useMemo(() => {
-    const raw = currentPixCopyPaste || order?.pixCopyPaste;
-    if (raw && raw.includes("br.gov.bcb.pix")) {
-      // Se continha o código antigo 010212 (que travava nos apps dos bancos), converte para o padrão válido 010211
-      if (raw.includes("010212") && raw.includes("+5575991638134")) {
-        const amount = Number(order?.totalAmount || 0);
-        return generatePixCopyPaste(amount, "***", OFFICIAL_PIX_KEY);
-      }
-      return raw;
-    }
-    const amount = Number(order?.totalAmount || 0);
-    return generatePixCopyPaste(amount, "***", OFFICIAL_PIX_KEY);
-  }, [currentPixCopyPaste, order?.pixCopyPaste, order?.totalAmount]);
+    return currentPixCopyPaste || order?.pixCopyPaste || "";
+  }, [currentPixCopyPaste, order?.pixCopyPaste]);
 
   useEffect(() => {
     if (!isOpen || !order) return;
@@ -65,14 +48,16 @@ export default function PixModal({
     // Reset states
     setIsPaid(order.paymentStatus === "PAID");
     setCopied(false);
-    setCopiedKey(false);
     setIsVerifying(false);
     setStatusMessage(null);
     setCurrentPixCopyPaste(order.pixCopyPaste || "");
     setPaidDetails(order.paymentStatus === "PAID" ? order : null);
 
     // Consulta inicial ativa na rota oficial /api/orders/[id]/status
-    fetch(`/api/orders/${order.id}/status`)
+    fetch(`/api/orders/${order.id}/status`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.isPaid || data.order?.paymentStatus === "PAID") {
@@ -84,10 +69,13 @@ export default function PixModal({
       })
       .catch(() => {});
 
-    // Polling contínuo automático a cada 3 segundos: consulta status em tempo real
+    // Polling contínuo automático a cada 3 segundos: consulta status em tempo real sem cache
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${order.id}/status`);
+        const res = await fetch(`/api/orders/${order.id}/status`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },
+        });
         const data = await res.json();
         if (res.ok) {
           if (data.order?.pixCopyPaste && data.order.pixCopyPaste !== currentPixCopyPaste) {
@@ -146,7 +134,7 @@ export default function PixModal({
     setTimeout(() => setCopied(false), 3500);
   };
 
-  // Botão de Confirmação Ativa: acionado pelo cliente para validar ou baixar o Pix na hora
+  // Consulta estrita a GET /api/orders/[id]/status (sem auto-aprovação fraudulenta)
   const handleConfirmPayment = async () => {
     if (isVerifying || isPaid) return;
     setIsVerifying(true);
@@ -154,23 +142,23 @@ export default function PixModal({
 
     try {
       const res = await fetch(`/api/orders/${order.id}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
       });
       const data = await res.json();
 
-      if (data.isPaid || data.success) {
+      if (data.isPaid || data.order?.paymentStatus === "PAID") {
         setIsPaid(true);
         setPaidDetails(data.order || order);
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         if (onPaymentConfirmed) onPaymentConfirmed();
       } else {
-        setStatusMessage(
-          data.message || "Aguardando compensação bancária. Se acabou de pagar, tente novamente em alguns segundos."
-        );
+        setStatusMessage("Pagamento ainda não identificado pelo banco.");
       }
     } catch (err) {
-      console.error("Erro ao confirmar pagamento:", err);
+      console.error("Erro ao verificar status junto ao banco:", err);
       setStatusMessage("Erro ao contatar o servidor. Tente novamente em instantes.");
     } finally {
       setIsVerifying(false);
@@ -335,13 +323,30 @@ export default function PixModal({
               {/* 2. QR Code Oficial Centralizado e Nítido */}
               <div className="flex flex-col items-center justify-center pt-1">
                 <div className="bg-white p-3.5 sm:p-4 rounded-2xl mx-auto w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center shadow-lg border border-slate-200">
-                  <QRCodeSVG
-                    value={pixCopyPaste}
-                    size={200}
-                    level="M"
-                    includeMargin={true}
-                    className="w-full h-full"
-                  />
+                  {order.pixQrCode ? (
+                    <img
+                      src={
+                        order.pixQrCode.startsWith("data:")
+                          ? order.pixQrCode
+                          : `data:image/png;base64,${order.pixQrCode}`
+                      }
+                      alt="QR Code Pix Oficial"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : pixCopyPaste ? (
+                    <QRCodeSVG
+                      value={pixCopyPaste}
+                      size={200}
+                      level="M"
+                      includeMargin={true}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400 text-xs">
+                      <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                      <span>Gerando QR Code...</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium text-center mt-2.5">
                   Aponte a câmera do seu banco para o QR Code ou copie o código Pix abaixo
@@ -388,7 +393,7 @@ export default function PixModal({
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-                      <span>Já fiz o pagamento / Verificar no Banco</span>
+                      <span>Já fiz o pagamento / Confirmar</span>
                     </>
                   )}
                 </button>
@@ -399,40 +404,6 @@ export default function PixModal({
                     <span>{statusMessage}</span>
                   </div>
                 )}
-              </div>
-
-              {/* 4. Faixa Compacta: Chave Pix Recebedora Alternativa */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Key className="w-4 h-4 text-[#10B981] shrink-0" />
-                  <div className="truncate">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Chave Telefone: </span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{OFFICIAL_PIX_KEY_DISPLAY}</span>
-                    <span className="text-[10px] text-slate-400 hidden sm:inline"> (Bolinha da Sorte)</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(OFFICIAL_PIX_KEY_DISPLAY);
-                    setCopiedKey(true);
-                    setTimeout(() => setCopiedKey(false), 2500);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  {copiedKey ? (
-                    <>
-                      <Check className="w-3 h-3 text-[#10B981]" />
-                      <span className="text-[#10B981]">Copiada!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>Copiar</span>
-                    </>
-                  )}
-                </button>
               </div>
 
               {/* Chave Pix para Recebimento de Prêmios (Discreta no rodapé do modal) */}

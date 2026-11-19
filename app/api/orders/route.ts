@@ -7,6 +7,9 @@ import {
   processPaidOrder,
 } from "@/lib/pix-gateway";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(request: Request) {
   try {
     const user = await getSessionUser();
@@ -73,17 +76,26 @@ export async function POST(request: Request) {
     const requestUrl = new URL(request.url);
     const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
 
-    // Gerar Pix real (Mercado Pago, Asaas ou EMV Central Bank com chave do admin)
-    const pixData = await createPixCharge({
-      orderId: initialOrder.id,
-      amount: totalAmount,
-      buyerName: userDb?.fullName || user.fullName,
-      buyerEmail: userDb?.email || user.email,
-      buyerCpf: userDb?.cpf || (pixKey.includes("@") ? "" : pixKey),
-      buyerPhone: userDb?.phone,
-      description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
-      baseUrl,
-    });
+    let pixData;
+    try {
+      // Gerar Pix real exclusivamente via API oficial do Mercado Pago
+      pixData = await createPixCharge({
+        orderId: initialOrder.id,
+        amount: totalAmount,
+        buyerName: userDb?.fullName || user.fullName,
+        buyerEmail: userDb?.email || user.email,
+        buyerCpf: userDb?.cpf || (pixKey.includes("@") ? "" : pixKey),
+        buyerPhone: userDb?.phone,
+        description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
+        baseUrl,
+      });
+    } catch (chargeErr: any) {
+      await prisma.order.delete({ where: { id: initialOrder.id } }).catch(() => {});
+      return NextResponse.json(
+        { error: chargeErr.message || "Erro ao gerar cobrança Pix no Mercado Pago." },
+        { status: 400 }
+      );
+    }
 
     const order = await prisma.order.update({
       where: { id: initialOrder.id },
@@ -201,7 +213,14 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({ orders });
+    return NextResponse.json(
+      { orders },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("List orders error:", error);
     return NextResponse.json(

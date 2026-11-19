@@ -30,21 +30,30 @@ export default function MinhasComprasPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Carregar usuário e pedidos
+  // Carregar usuário e pedidos sem cache
   const loadOrders = async (query?: string) => {
     setLoading(true);
     try {
       // 1. Carregar usuário atual
-      const userRes = await fetch("/api/auth/me");
+      const userRes = await fetch("/api/auth/me", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const userData = await userRes.json();
       setUser(userData.user || null);
 
-      // 2. Carregar pedidos
+      // 2. Carregar pedidos diretamente do banco
       let url = "/api/orders";
       if (query && query.trim()) {
         url += `?query=${encodeURIComponent(query.trim())}`;
       }
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
       const data = await res.json();
       setOrders(data.orders || []);
     } catch (err) {
@@ -56,9 +65,20 @@ export default function MinhasComprasPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
 
-  // Polling automático a cada 3 segundos para pedidos pendentes
+    // Recarregar pedidos ao focar a janela (ex: quando o admin aprova ou o pagamento é concluído)
+    const handleFocus = () => {
+      loadOrders(searchQuery);
+    };
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("visibilitychange", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [searchQuery]);
+
+  // Polling automático a cada 3 segundos com cache: 'no-store' para pedidos pendentes
   useEffect(() => {
     const hasPending = orders.some((o) => o.paymentStatus === "PENDING");
     if (!hasPending) return;
@@ -69,7 +89,13 @@ export default function MinhasComprasPage() {
         if (searchQuery && searchQuery.trim()) {
           url += `?query=${encodeURIComponent(searchQuery.trim())}`;
         }
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.orders) {

@@ -108,17 +108,26 @@ export async function POST(request: Request) {
     const requestUrl = new URL(request.url);
     const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
 
-    // 2. Gerar cobrança Pix oficial na API do gateway com notification_url apontando para /api/webhooks/pix
-    const pixData = await createPixCharge({
-      orderId: initialOrder.id,
-      amount: totalAmount,
-      buyerName: buyerName || userDb?.fullName || user.fullName,
-      buyerEmail: buyerEmail || userDb?.email || user.email,
-      buyerCpf: buyerCpf || userDb?.cpf || (finalPixKey.includes("@") ? "" : finalPixKey),
-      buyerPhone: buyerPhone || userDb?.phone,
-      description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
-      baseUrl,
-    });
+    // 2. Gerar cobrança Pix oficial diretamente na API do Mercado Pago
+    let pixData;
+    try {
+      pixData = await createPixCharge({
+        orderId: initialOrder.id,
+        amount: totalAmount,
+        buyerName: buyerName || userDb?.fullName || user.fullName,
+        buyerEmail: buyerEmail || userDb?.email || user.email,
+        buyerCpf: buyerCpf || userDb?.cpf || (finalPixKey.includes("@") ? "" : finalPixKey),
+        buyerPhone: buyerPhone || userDb?.phone,
+        description: `Pedido ${initialOrder.id.slice(0, 8)} - ${campaign.title}`,
+        baseUrl,
+      });
+    } catch (chargeErr: any) {
+      await prisma.order.delete({ where: { id: initialOrder.id } }).catch(() => {});
+      return NextResponse.json(
+        { error: chargeErr.message || "Erro ao gerar cobrança Pix no Mercado Pago." },
+        { status: 400 }
+      );
+    }
 
     // 3. Atualizar o pedido salvando externalPaymentId, pixQrCode e pixCopyPaste
     const order = await prisma.order.update({
